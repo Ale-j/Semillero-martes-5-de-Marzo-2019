@@ -1,0 +1,163 @@
+---
+title: "Estado nutricional nuños menores de 6 años - Medellín 2016"
+author: "Mariana Flórez Restrepo"
+date: "5 de marzo de 2019"
+output: 
+  html_document: 
+  toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+```
+
+# Lesctura de datos 
+
+- [Estado nutricional de la población menor de 6 años - Municipio de Medellín 2016](https://www.datos.gov.co/Salud-y-Protecci-n-Social/Estado-nutricional-de-la-poblaci-n-menor-de-6-a-os/bkt5-gpif)
+
+```{r, eval=FALSE}
+datos<- read.csv(file = "Estado_nutricional_de_la_poblaci_n_menor_de_6_a_os_-_Municipio_de_Medell_n_2016.csv",encoding = "UTF-8")
+```
+
+## Conversión formato .Rdata
+
+```{r, eval=FALSE}
+# Conversión 
+
+save(datos, file = "Nutricion.Rdata")
+
+```
+
+```{r}
+# Cargando tados en formato .Rdata
+
+load("Nutricion.Rdata")
+```
+
+```{r}
+# Estructura interna de los datos
+
+str(datos)
+```
+
+## Seleccionando columnas con `select()`
+
+```{r, message=FALSE}
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+datos2 <- datos %>% 
+  select(-c(Regimen, EPS, Grupo.Edad))
+
+```
+
+-**Editando nombres**
+
+```{r}
+names(datos2) <- c ("Sexo", "Peso", "Estatura" , "DSPE" , "DPE" , "DSTE", "DTE", "DSTP", "DPT", "Comuna", "Zona", "Edad")
+
+str(datos2)
+```
+
+## Modificando niveles de factores  `mutate()`
+
+```{r}
+datos3 <- datos2 %>% 
+  mutate(Sexo = factor(Sexo, labels = c("Femenino", "Masculino")), 
+         DPE = factor(DPE, labels = c("Peso adecuado", "Peso bajo", "Peso muy bajo", "Encima de 1 DE","Riesgo peso bajo")),
+         DTE = factor(DTE, labels = c("Estatura adecuada", "Retraso en talla", "Muy alto" ,"Riesgo E. baja")),
+                      DPT = factor(DPT, labels = c("Adecuado-Edad","Delgado" , "Obeso" ,"Adecuado-Estatura","D.Aguda", "D. Severa", "R. peso bajo", "R. Delgadez","Sobrepeso")))
+
+str(datos3)
+
+
+```
+
+## Creando nueva variable `Edad2 ` en años
+
+```{r, eval=FALSE}
+#una forma con la biblioteca base de R
+
+datos3$Edad2 <- datos$Edad/365.5  
+```
+
+```{r}
+datos4 <- datos3 %>% 
+  mutate(Edad2 =Edad/ 365.5)
+str(datos4)
+```
+
+# Filtrando individuos mayores a 6 años  (`filter()`)
+
+```{r}
+datos5 <- datos4 %>% 
+  filter(Edad2 <=6)
+```
+
+# Procesos concatenados 
+```{r}
+datos_final <- datos2 %>% 
+  mutate(Sexo = factor(Sexo, labels = c("Femenino", "Masculino")), 
+         DPE = factor(DPE, labels = c("Peso adecuado", "Peso bajo", "Peso muy bajo", "Encima de 1 DE","Riesgo peso bajo")),
+         DTE = factor(DTE, labels = c("Estatura adecuada", "Retraso en talla", "Muy alto" ,"Riesgo E. baja")),
+                      DPT = factor(DPT, labels = c("Adecuado-Edad","Delgado" , "Obeso" ,"Adecuado-Estatura","D.Aguda", "D. Severa", "R. peso bajo", "R. Delgadez","Sobrepeso"))) %>% 
+  mutate(Edad2= Edad/365.5) %>% 
+  filter(Edad2 <=6)
+  
+str(datos_final)
+
+```
+
+# Análisis exploratorio de datos
+
+## Frecuencias absolutas por factores
+
+### Sexo 
+
+```{r}
+
+library(knitr)
+fa_sexo <- datos_final %>% 
+  group_by(Sexo) %>% 
+  summarise(Total= n(), Porcentaje = round (Total/nrow(datos_final)*100, 
+            digits=2 )) %>% 
+  kable()
+
+fa_sexo
+```
+
+# Visualización con `ggplot2`
+
+```{r}
+# Base de datos con informacion a graficar
+fa_sexo2 <- datos_final %>%
+  group_by(Sexo) %>% 
+  summarise(Total= n(), Porcentaje = round (Total/nrow(datos_final)*100, 
+            digits=2 )) 
+
+# Gráfico con ggplot2
+ggplot(data = fa_sexo2, mapping =  aes(x = Sexo, y = Total)) + 
+  geom_col(color = "black", fill= "dodgerblue2") + 
+  labs(x= "Género", y= "F. Absoluta",
+       title ="Frecuencia absoluta por género")+
+  theme_bw()
+```
+
+
+# `dplyr` con `ggplot2`
+
+```{r}
+datos_final %>% 
+  group_by(Sexo) %>% 
+  summarise(Total= n(), Porcentaje = round (Total/nrow(datos_final)*100, 
+            digits=2 ))  %>% 
+  ggplot (data=. , mapping = aes(x = Sexo, y = Total)) +
+  geom_col(color = "black", fill= "dodgerblue2") + 
+  labs(x= "Género", y= "F. Absoluta",
+       title ="Frecuencia absoluta por género")+
+  theme_bw()
+  
+```
+
